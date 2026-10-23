@@ -248,7 +248,6 @@ if __name__ == "__main__":
     global cliente_gemini  # <--- ESTA LÍNEA ES VITAL AQUÍ
     """
     Envía el comentario del formulario a Gemini y retorna
-    un diccionario con 'clasificación' y 'sentimiento'.
     """
     # ... el resto del código
 
