@@ -244,12 +244,13 @@ if __name__ == "__main__":
             sys.exit(1)
 
     # Inicializar cliente Gemini (Sin el 'global' problemático)
-    try:
-        cliente_gemini = genai.Client(api_key=GEMINI_API_KEY)
-        print("✅ Cliente de Gemini inicializado correctamente.")
-    except Exception as e:
-        print(f"❌ Error al inicializar Gemini: {e}")
-        sys.exit(1)
+    def analizar_con_gemini(comentario):
+    global cliente_gemini  # <--- ESTA LÍNEA ES VITAL AQUÍ
+    """
+    Envía el comentario del formulario a Gemini y retorna
+    un diccionario con 'clasificación' y 'sentimiento'.
+    """
+    # ... el resto del código
 
     if "--una-vez" in sys.argv:
         print("⚡ Ejecutando en modo único (--una-vez para GitHub Actions)...")
