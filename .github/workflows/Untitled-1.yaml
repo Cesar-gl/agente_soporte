@@ -1,0 +1,31 @@
+name: Agente de Soporte
+
+on:
+  schedule:
+    # Se ejecuta cada 30 minutos (en formato UTC)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  ejecutar-agente:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # Si falla, se detiene a los 10 min para no gastar cuota
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar el agente
+        env:
+          # Aquí inyectamos los secretos de GitHub a las variables de entorno
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_TOKEN_JSON: ${{ secrets.GOOGLE_TOKEN_JSON }}
+        run: python agente_soporte.py --una-vez 

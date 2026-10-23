@@ -1,0 +1,6 @@
+gspread
+google-auth
+google-auth-oauthlib
+google-genai
+schedule
+python-dotenv
