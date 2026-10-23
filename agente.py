@@ -19,7 +19,7 @@ for var in ['REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE']:
         del os.environ[var]
 
 # 1. Credenciales y Acceso
-ARCHIVO_CREDENCIALES = "client_secrets.json" # CORREGIDO: En plural
+ARCHIVO_CREDENCIALES = "client_secrets.json"
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "TU_API_KEY_AQUI")
 
@@ -37,9 +37,9 @@ COL_SENTIMIENTO    = 5   # Columna E: Sentimiento IA (Positivo, Negativo, Neutro
 COL_EJECUTADO      = 6   # Columna F: Marca de procesamiento ("SI")
 
 # 4. Parámetros de la IA y Ejecución
-MODELO_GEMINI = "gemini-2.5-flash"  # Modelo estable recomendado para scripts de soporte
+MODELO_GEMINI = "gemini-2.5-flash"
 INTERVALO_MINUTOS = 1
-PAUSA_ENTRE_LLAMADAS_SEG = 30  # Para respetar los límites de cuota gratuita
+PAUSA_ENTRE_LLAMADAS_SEG = 30
 
 # Categorías personalizables para tu negocio
 CATEGORIAS = "Ventas, Soporte Técnico, Logística"
@@ -47,16 +47,12 @@ SENTIMIENTOS = "Positivo, Negativo, Neutro"
 
 # ═════════════════════════════════════════════════════════════════════
 
+# Declaramos la variable global aquí
 cliente_gemini = None
 
 
 def conectar_sheets():
-    """
-    Autentica con Google usando la variable de entorno en la nube (GitHub Actions)
-    o mediante OAuth 2.0 local con token.json, y abre la hoja vinculada.
-    """
     try:
-        # FASE 1.2: Soporte para GitHub Actions mediante GOOGLE_TOKEN_JSON
         google_token_env = os.getenv("GOOGLE_TOKEN_JSON")
         if google_token_env:
             try:
@@ -74,10 +70,8 @@ def conectar_sheets():
                 print(f"❌ Error al autenticar con GOOGLE_TOKEN_JSON: {e}")
                 return None
         else:
-            # Autenticación local tradicional de la Práctica 1
             if not os.path.exists(ARCHIVO_CREDENCIALES):
                 print(f"❌ Error: No se encontró el archivo local '{ARCHIVO_CREDENCIALES}'.")
-                print("   Coloca el archivo de credenciales en esta misma carpeta.")
                 return None
 
             cliente_gs = gspread.oauth(
@@ -86,13 +80,11 @@ def conectar_sheets():
             )
             print("✅ Conectado a Google Sheets usando credenciales locales.")
 
-        # Intento de apertura por ID o por nombre exacto
         if len(NOMBRE_O_ID_HOJA) > 30 and "/" not in NOMBRE_O_ID_HOJA and " " not in NOMBRE_O_ID_HOJA:
             libro = cliente_gs.open_by_key(NOMBRE_O_ID_HOJA)
         else:
             libro = cliente_gs.open(NOMBRE_O_ID_HOJA)
 
-        # Seleccionar pestaña específica o la primera hoja
         if NOMBRE_PESTANA:
             hoja = libro.worksheet(NOMBRE_PESTANA)
         else:
@@ -103,7 +95,6 @@ def conectar_sheets():
 
     except gspread.exceptions.SpreadsheetNotFound:
         print(f"❌ Error: No se encontró la hoja '{NOMBRE_O_ID_HOJA}'.")
-        print("   Verifica mayúsculas, tildes y espacios, o usa el ID de la URL.")
         return None
     except Exception as e:
         print(f"❌ Error inesperado al conectar con Google Sheets: {e}")
@@ -111,10 +102,9 @@ def conectar_sheets():
 
 
 def analizar_con_gemini(comentario):
-    """
-    Envía el comentario del formulario a Gemini y retorna
-    un diccionario con 'clasificación' y 'sentimiento'.
-    """
+    # Le indicamos a Python que usaremos la variable global
+    global cliente_gemini
+
     instruccion_sistema = (
         "Eres un analista de soporte y servicio al cliente de alta precisión. "
         "Tu única tarea es devolver una respuesta en formato JSON estricto, "
@@ -130,7 +120,6 @@ def analizar_con_gemini(comentario):
         "Devuelve únicamente el objeto JSON."
     )
 
-    # Aseguramos que el cliente esté inicializado
     if cliente_gemini is None:
         raise ValueError("El cliente de Gemini no ha sido inicializado.")
 
@@ -152,14 +141,6 @@ def analizar_con_gemini(comentario):
 
 
 def ejecutar_agente():
-    """
-    Ciclo principal del agente:
-    1. Conectar con la hoja vinculada a Google Forms.
-    2. Leer respuestas.
-    3. Analizar filas nuevas (columna F != 'SI').
-    4. Guardar resultados en Sheets.
-    Retorna True si finalizó correctamente, False en caso de error crítico.
-    """
     print("\n" + "=" * 60)
     print("🤖 Iniciando ciclo de revisión de respuestas...")
     print("=" * 60)
@@ -175,7 +156,6 @@ def ejecutar_agente():
         print(f"❌ Error al leer las filas: {e}")
         return False
 
-    # Omitir fila de encabezados
     filas_datos = todas_las_filas[1:]
     if not filas_datos:
         print("📭 Aún no hay respuestas registradas en el formulario.")
@@ -187,7 +167,6 @@ def ejecutar_agente():
     max_col_necesaria = max(COL_NOMBRE, COL_COMENTARIO, COL_CLASIFICACION, COL_SENTIMIENTO, COL_EJECUTADO)
 
     for indice, fila in enumerate(filas_datos, start=2):
-        # Asegurar longitud mínima de la fila para evitar IndexError
         while len(fila) < max_col_necesaria:
             fila.append("")
 
@@ -195,11 +174,9 @@ def ejecutar_agente():
         comentario     = fila[COL_COMENTARIO - 1]
         ya_procesada   = fila[COL_EJECUTADO - 1]
 
-        # Saltar si ya fue procesada anteriormente
         if ya_procesada.strip().upper() == "SI":
             continue
 
-        # Si el comentario está vacío, omitir
         if not comentario.strip():
             print(f"⚠️ Fila {indice}: Comentario vacío, omitiendo.")
             continue
@@ -207,7 +184,6 @@ def ejecutar_agente():
         print(f"\n🔎 Procesando Fila {indice} | Cliente: {nombre_cliente or '(Anónimo / No especificado)'}")
         print(f"   💬 Comentario: {comentario[:80]}...")
 
-        # Analizar con IA (con reintentos ante saturación o límites de cuota)
         resultado = None
         for intento in range(3):
             try:
@@ -234,7 +210,6 @@ def ejecutar_agente():
         print(f"   🏷️ Clasificación: {clasificacion}")
         print(f"   ❤️ Sentimiento:   {sentimiento}")
 
-        # Guardar en Google Sheets
         try:
             hoja.update_cell(indice, COL_CLASIFICACION, clasificacion)
             hoja.update_cell(indice, COL_SENTIMIENTO, sentimiento)
@@ -245,7 +220,6 @@ def ejecutar_agente():
             print(f"   ❌ Error al escribir en Google Sheets: {e}")
             continue
 
-        # Pausa para respetar la tasa de peticiones de la API
         time.sleep(PAUSA_ENTRE_LLAMADAS_SEG)
 
     print("\n" + "-" * 60)
@@ -260,29 +234,23 @@ def ejecutar_agente():
 if __name__ == "__main__":
     print("🚀 Iniciando Agente de Análisis de Google Forms...")
 
-    # Validación de API Key
     if not GEMINI_API_KEY or GEMINI_API_KEY == "TU_API_KEY_AQUI":
         print("❌ Error: Debes configurar GEMINI_API_KEY en tu archivo .env.")
         sys.exit(1)
 
-    # FASE 1.4: Validar credenciales locales solo si NO estamos ejecutando en la nube con GOOGLE_TOKEN_JSON
     if not os.getenv("GOOGLE_TOKEN_JSON"):
         if not os.path.exists(ARCHIVO_CREDENCIALES):
             print(f"❌ Error: Falta el archivo '{ARCHIVO_CREDENCIALES}' para ejecución local.")
-            print("   Descarga tus credenciales OAuth de Google Cloud y colócalas aquí.")
             sys.exit(1)
 
-    # Inicializar cliente Gemini
+    # Inicializar cliente Gemini (Sin el 'global' problemático)
     try:
-        # CORREGIDO: Agregamos 'global' para que la función analizar_con_gemini pueda usarlo
-        global cliente_gemini 
         cliente_gemini = genai.Client(api_key=GEMINI_API_KEY)
         print("✅ Cliente de Gemini inicializado correctamente.")
     except Exception as e:
         print(f"❌ Error al inicializar Gemini: {e}")
         sys.exit(1)
 
-    # FASE 1.3: Soporte para modo ejecución única (--una-vez) requerido por GitHub Actions
     if "--una-vez" in sys.argv:
         print("⚡ Ejecutando en modo único (--una-vez para GitHub Actions)...")
         exito = ejecutar_agente()
@@ -291,11 +259,9 @@ if __name__ == "__main__":
         else:
             sys.exit(1)
     else:
-        # Modo local continuo (Práctica 1)
         print("▶️ Ejecutando primera revisión local...")
         ejecutar_agente()
 
-        # Programar revisiones automáticas periódicas locales
         schedule.every(INTERVALO_MINUTOS).minutes.do(ejecutar_agente)
         print(f"\n⏰ Agente programado localmente para revisar cada {INTERVALO_MINUTOS} minuto(s).")
         print("   Presiona Ctrl+C en cualquier momento para detenerlo.\n")
