@@ -28,4 +28,4 @@ jobs:
           # Aquí inyectamos los secretos de GitHub a las variables de entorno
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_TOKEN_JSON: ${{ secrets.GOOGLE_TOKEN_JSON }}
-        run: python agente_soporte.py --una-vez 
+        run: python agente.py --una-vez
