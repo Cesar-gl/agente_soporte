@@ -2,9 +2,14 @@ import json, os, time, schedule, gspread, sys
 from google.genai import types
 from google import genai
 from dotenv import load_dotenv
+
+# Limpiar variables de entorno de certificados rotos
+for var in ['REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE']:
+    if var in os.environ:
+        del os.environ[var]
+
 load_dotenv()
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
+# ... el resto de tus imports
 
 ARCHIVO_CREDENCIALES = "client_secrets.json"
 NOMBRE_HOJA = "Respuestas de Quejas (Base de Datos)"
