@@ -11,7 +11,7 @@ for var in ['REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE']:
 load_dotenv()
 # ... el resto de tus imports
 
-ARCHIVO_CREDENCIALES = "client_secrets.json"
+ARCHIVO_CREDENCIALES = "client_secret.json"
 NOMBRE_HOJA = "Respuestas de Quejas (Base de Datos)"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "TU_API_KEY_AQUI")
 INTERVALO_MINUTOS = 15
