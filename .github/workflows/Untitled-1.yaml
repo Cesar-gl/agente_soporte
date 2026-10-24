@@ -3,7 +3,7 @@ name: Agente de Soporte
 on:
   schedule:
     # Se ejecuta cada 30 minutos (en formato UTC)
-    - cron: '*/30 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
 
 jobs:
