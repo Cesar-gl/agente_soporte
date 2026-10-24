@@ -2,6 +2,9 @@ import json, os, time, schedule, gspread, sys
 from google.genai import types
 from google import genai
 from dotenv import load_dotenv
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+
 
 # Limpiar variables de entorno de certificados rotos
 for var in ['REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE']:
@@ -14,7 +17,7 @@ load_dotenv()
 ARCHIVO_CREDENCIALES = "client_secret.json"
 NOMBRE_HOJA = "Respuestas de Quejas (Base de Datos)"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "TU_API_KEY_AQUI")
-INTERVALO_MINUTOS = 15
+INTERVALO_MINUTOS = 1
 COL_CLASIFICACION = 4   # D
 COL_SENTIMIENTO   = 5   # E
 COL_EJECUTADO     = 6   # F
