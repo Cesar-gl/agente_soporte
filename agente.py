@@ -55,7 +55,7 @@ def conectar_sheets():
         else:
             print("🌐 Autenticando mediante el navegador (uso local)...")
             # Si no hay token, usar el método normal de la Práctica 1
-            cliente = gspread.oauth(credentials_filename=ARCHIVO_CREDENCIALES, authorized_user_filename="token_nuevo.json")
+            cliente = gspread.oauth(credentials_filename=ARCHIVO_CREDENCIALES, authorized_user_filename="token.json")
 
         # 2. Abrir la hoja de cálculo y retornar
         libro = cliente.open(NOMBRE_HOJA)
