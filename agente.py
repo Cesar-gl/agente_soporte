@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 
-
 # Limpiar variables de entorno de certificados rotos
 for var in ['REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE']:
     if var in os.environ:
@@ -15,10 +14,10 @@ load_dotenv()
 
 ARCHIVO_CREDENCIALES = "client_secret.json"
 NOMBRE_HOJA = "Respuestas de Quejas (Base de Datos)"
-INTERVALO_MINUTOS = 1
+INTERVALO_MINUTOS = 5
 
 # Límite de peticiones a Gemini por ejecución
-MAX_ANALISIS_POR_EJECUCION = 5
+MAX_ANALISIS_POR_EJECUCION = 3
 
 cliente_gemini = None
 
@@ -28,33 +27,26 @@ def conectar_sheets():
     Usa el token de GitHub Actions si existe, o abre el navegador si no.
     """
     try:
-        # 1. Revisar si estamos en GitHub Actions (existe la variable)
         token_json = os.getenv("GOOGLE_TOKEN_JSON")
         
         if token_json:
             print("🔑 Autenticando usando el token (GitHub Actions / Railway)...")
-            # Convertir el texto JSON a diccionario
             info_token = json.loads(token_json)
             
-            # Crear las credenciales usando los scopes necesarios
             creds = Credentials.from_authorized_user_info(
                 info_token, 
                 scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
             )
             
-            # Refrescar el token para asegurar que está vigente
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             
-            # Autorizar a gspread con estas credenciales
             cliente = gspread.authorize(creds)
             
         else:
             print("🌐 Autenticando mediante el navegador (uso local)...")
-            # Si no hay token, usar el método normal de la Práctica 1
             cliente = gspread.oauth(credentials_filename=ARCHIVO_CREDENCIALES, authorized_user_filename="token_nuevo.json")
 
-        # 2. Abrir la hoja de cálculo y retornar
         libro = cliente.open(NOMBRE_HOJA)
         hoja = libro.sheet1
         print(f"✅ Conectado exitosamente a la hoja: {NOMBRE_HOJA}")
@@ -75,6 +67,7 @@ def analizar_con_gemini(comentario):
     Envía un comentario a Gemini y devuelve un diccionario con
     la clasificación y el sentimiento detectados.
     """
+    
     instruccion_sistema = (
         "Eres un analista de soporte al cliente. "
         "Tu única tarea es devolver una respuesta en formato JSON, "
@@ -93,13 +86,10 @@ def analizar_con_gemini(comentario):
     )
 
     respuesta = cliente_gemini.models.generate_content(
-        
-        model = "gemini-3.8-flash", # Nota: Cambié a 1.5-flash que es la versión estable actual
+        model = "gemini-3.8-flash", 
         contents = instruccion_usuario,
         config = types.GenerateContentConfig(
-            system_instruction=instruccion_sistema,
-            # Agrega esta línea para desactivar el aviso:
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
+            system_instruction=instruccion_sistema
         ),
     )
 
@@ -158,11 +148,9 @@ def ejecutar_agente():
 
         print(f"   🔍 DEBUG fila {indice}: col G = '{ya_procesada}' → {'SALTAR' if ya_procesada.strip().upper() == 'SI' else 'PROCESAR'}")
         
-        # Filtrar: si ya tiene "SI" en la columna G, se omite
         if ya_procesada.strip().upper() == "SI":
             continue
 
-        # Si el comentario está vacío, también se omite
         if not comentario.strip():
             print(f"⚠️ Fila {indice}: comentario vacío, se omite.")
             continue
@@ -188,7 +176,7 @@ def ejecutar_agente():
             # Reintento para 503 (servidor saturado)
             if "503" in error_str:
                 print("   ⏳ Servidor saturado. Reintentando en 10 s...")
-                time.sleep(10)
+                time.sleep(2)
                 try:
                     resultado = analizar_con_gemini(comentario)
                 except Exception as e2:
@@ -208,7 +196,7 @@ def ejecutar_agente():
         print(f"   ✅ Clasificación: {clasificacion}")
         print(f"   ✅ Sentimiento:   {sentimiento}")
 
-        # ── 3.3 ESCRIBIR (Bloque corregido sin duplicados) ──
+        # ── 3.3 ESCRIBIR ──
         try:
             hoja.update_cell(indice, 5, clasificacion)   # E (Columna 5)
             hoja.update_cell(indice, 6, sentimiento)     # F (Columna 6)
@@ -217,7 +205,6 @@ def ejecutar_agente():
             print(f"   💾 Resultados escritos en la fila {indice}.")
             nuevas_procesadas += 1
             
-            # Pausa para respetar la cuota de peticiones/minuto
             time.sleep(10)
         except Exception as e:
             print(f"   ❌ Error al escribir en la hoja: {e}")
@@ -244,8 +231,9 @@ if __name__ == "__main__":
         exit(1)
 
     try:
-        cliente_gemini = genai.Client(api_key=GEMINI_API_KEY)
-        print("✅ Cliente de Gemini inicializado.")
+        # EL CAMBIO CLAVE AQUÍ: Forzamos la versión v1beta
+        cliente_gemini = genai.Client(api_key=GEMINI_API_KEY, http_options={'api_version': 'v1beta'})
+        print("✅ Cliente de Gemini inicializado (v1beta).")
     except Exception as e:
         print(f"❌ Error al inicializar Gemini: {e}")
         exit(1)
